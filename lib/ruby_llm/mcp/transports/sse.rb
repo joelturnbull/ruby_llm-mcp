@@ -169,9 +169,12 @@ module RubyLLM
 
         def stream_events_from_server
           sse_client = HTTPX.plugin(:stream)
-          sse_client = sse_client.with(
-            { headers: @headers }.merge(@httpx_options)
-          )
+          
+          # Debug: log the actual options being passed to HTTPX
+          options = { headers: @headers }.merge(@httpx_options)
+          RubyLLM::MCP.logger.info "HTTPX Options: #{options.inspect}"
+          
+          sse_client = sse_client.with(options)
           response = sse_client.get(@event_url, stream: true)
           response.each_line do |event_line|
             unless @running
