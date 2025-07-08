@@ -60,7 +60,10 @@ module RubyLLM
 
           begin
             http_client = HTTPClient.connection.with(timeout: { request_timeout: @request_timeout / 1000 },
-                                                     headers: @headers)
+                                                     headers: @headers,
+            # Force HTTP/1.1 to avoid HTTP/2 protocol errors with SSE in cloud environments
+            # This fixes "stream 1 closed with error: protocol_error" issues
+            fallback_protocol: "http/1.1")
             response = http_client.post(@messages_url, body: JSON.generate(body))
 
             unless response.status == 200
@@ -165,7 +168,10 @@ module RubyLLM
         def stream_events_from_server
           sse_client = HTTPX.plugin(:stream)
           sse_client = sse_client.with(
-            headers: @headers
+            headers: @headers,
+            # Force HTTP/1.1 to avoid HTTP/2 protocol errors with SSE in cloud environments
+            # This fixes "stream 1 closed with error: protocol_error" issues
+            fallback_protocol: "http/1.1"
           )
           response = sse_client.get(@event_url, stream: true)
           response.each_line do |event_line|
