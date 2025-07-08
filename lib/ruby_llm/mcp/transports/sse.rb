@@ -14,11 +14,12 @@ module RubyLLM
 
         attr_reader :headers, :id, :coordinator
 
-        def initialize(url:, coordinator:, request_timeout:, headers: {})
+        def initialize(url:, coordinator:, request_timeout:, headers: {}, httpx_options: {})
           @event_url = url
           @messages_url = nil
           @coordinator = coordinator
           @request_timeout = request_timeout
+          @httpx_options = httpx_options
 
           uri = URI.parse(url)
           @root_url = "#{uri.scheme}://#{uri.host}"
@@ -59,11 +60,12 @@ module RubyLLM
           end
 
           begin
-            http_client = HTTPClient.connection.with(timeout: { request_timeout: @request_timeout / 1000 },
-                                                     headers: @headers,
-            # Force HTTP/1.1 to avoid HTTP/2 protocol errors with SSE in cloud environments
-            # This fixes "stream 1 closed with error: protocol_error" issues
-            fallback_protocol: "http/1.1")
+            http_client = HTTPClient.connection.with(
+              @httpx_options.merge(
+                timeout: { request_timeout: @request_timeout / 1000 },
+                headers: @headers
+              )
+            )
             response = http_client.post(@messages_url, body: JSON.generate(body))
 
             unless response.status == 200
@@ -168,10 +170,7 @@ module RubyLLM
         def stream_events_from_server
           sse_client = HTTPX.plugin(:stream)
           sse_client = sse_client.with(
-            headers: @headers,
-            # Force HTTP/1.1 to avoid HTTP/2 protocol errors with SSE in cloud environments
-            # This fixes "stream 1 closed with error: protocol_error" issues
-            fallback_protocol: "http/1.1"
+            @httpx_options.merge(headers: @headers)
           )
           response = sse_client.get(@event_url, stream: true)
           response.each_line do |event_line|
