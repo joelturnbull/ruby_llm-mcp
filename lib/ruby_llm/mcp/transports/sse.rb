@@ -174,6 +174,12 @@ module RubyLLM
           options = { headers: @headers }.merge(@httpx_options)
           RubyLLM::MCP.logger.info "HTTPX Options: #{options.inspect}"
           
+          # To fix HTTP/2 protocol errors in cloud environments, use:
+          # httpx_options: {
+          #   fallback_protocol: "http/1.1",
+          #   ssl: { alpn_protocols: [] }
+          # }
+          
           sse_client = sse_client.with(options)
           response = sse_client.get(@event_url, stream: true)
           response.each_line do |event_line|
