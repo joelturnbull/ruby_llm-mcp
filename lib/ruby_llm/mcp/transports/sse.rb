@@ -61,10 +61,10 @@ module RubyLLM
 
           begin
             http_client = HTTPClient.connection.with(
-              @httpx_options.merge(
+              { 
                 timeout: { request_timeout: @request_timeout / 1000 },
-                headers: @headers
-              )
+                headers: @headers 
+              }.merge(@httpx_options)
             )
             response = http_client.post(@messages_url, body: JSON.generate(body))
 
@@ -170,7 +170,7 @@ module RubyLLM
         def stream_events_from_server
           sse_client = HTTPX.plugin(:stream)
           sse_client = sse_client.with(
-            @httpx_options.merge(headers: @headers)
+            { headers: @headers }.merge(@httpx_options)
           )
           response = sse_client.get(@event_url, stream: true)
           response.each_line do |event_line|
